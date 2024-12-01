@@ -12,7 +12,7 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Routes
-app.use("/api/users", userRoutes);
+app.use("/api/auth", userRoutes);
 
 // Start Server
 app.listen(PORT, () => {
