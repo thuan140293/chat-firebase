@@ -50,7 +50,6 @@ const getUserDetails = async (uid) => {
       throw new Error("User not found");
     }
 
-    console.log("User data:", userDoc.data());
     return userDoc.data();
   } catch (error) {
     console.error("Error fetching user details:", error.message);

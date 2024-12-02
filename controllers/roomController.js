@@ -2,44 +2,45 @@ const { createRoom } = require("../services/roomService");
 const { addMembersToRoom } = require("../services/roomService");
 const { getRoomDetails } = require("../services/roomService");
 
-const createChatRoom = async (req, res) => {
-    const { name, createdBy, members } = req.body;
+const createChatRoom = async (socket, data) => {
+    const { name, createdBy, members } = data;
 
     try {
         if (!name || !createdBy) {
-            return res.status(400).json({ error: "Room name and createdBy are required" });
+            socket.emit('error', { error: "Room name and createdBy are required" });
+            return;
         }
 
         const room = await createRoom(name, createdBy, members);
-        res.status(201).json(room);
+        socket.emit('roomCreated', room); // Emit to the creator
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        socket.emit('error', { error: error.message });
     }
 };
 
-const inviteToRoom = async (req, res) => {
-    const { roomId, newMembers } = req.body;
+const inviteToRoom = async (socket, data) => {
+    const { roomId, newMembers } = data;
 
     try {
         if (!roomId || !newMembers || !newMembers.length) {
-            return res.status(400).json({ error: "roomId and newMembers are required" });
+            socket.emit('error', { error: "roomId and newMembers are required" });
+            return;
         }
 
         const updatedMembers = await addMembersToRoom(roomId, newMembers);
-        res.status(200).json({ members: updatedMembers });
+        socket.emit('membersUpdated', { members: updatedMembers });
+        socket.to(roomId).emit('membersUpdated', { members: updatedMembers }); // Broadcast to the room
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        socket.emit('error', { error: error.message });
     }
 };
 
-const fetchRoomDetails = async (req, res) => {
-    const { roomId } = req.params;
-
+const fetchRoomDetails = async (socket, roomId) => {
     try {
         const roomDetails = await getRoomDetails(roomId);
-        res.status(200).json(roomDetails);
+        socket.emit('roomDetails', roomDetails);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        socket.emit('error', { error: error.message });
     }
 };
 
