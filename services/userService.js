@@ -1,4 +1,5 @@
 const { auth, db } = require("../configs/firebase");
+const { doc, setDoc, getDoc } = require("firebase/firestore");
 const { signInWithEmailAndPassword, createUserWithEmailAndPassword } = require("firebase/auth");
 
 // Register user and save to Firestore
@@ -7,8 +8,9 @@ const registerUser = async (email, password, displayName) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // Save additional details to Firestore
-    await db.collection("users").doc(user.uid).set({
+    // Save user details to Firestore (exclude password)
+    await setDoc(doc(db, "users", user.uid), {
+      uid: user.uid,
       email: user.email,
       displayName: displayName || "",
       createdAt: new Date().toISOString(),
@@ -24,7 +26,11 @@ const registerUser = async (email, password, displayName) => {
 const loginUser = async (email, password) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    return userCredential.user;
+    const user = userCredential.user;
+
+    // Retrieve the ID token
+    const token = await user.getIdToken();
+    return { user, token };
   } catch (error) {
     throw new Error(error.message);
   }
@@ -33,14 +39,24 @@ const loginUser = async (email, password) => {
 // Fetch user details from Firestore
 const getUserDetails = async (uid) => {
   try {
-    const userDoc = await db.collection("users").doc(uid).get();
-    if (!userDoc.exists) {
+    if (!uid) {
+      throw new Error("Invalid UID");
+    }
+
+    const userRef = doc(db, "users", uid);
+    const userDoc = await getDoc(userRef);
+
+    if (!userDoc.exists()) {
       throw new Error("User not found");
     }
+
+    console.log("User data:", userDoc.data());
     return userDoc.data();
   } catch (error) {
+    console.error("Error fetching user details:", error.message);
     throw new Error(error.message);
   }
 };
+
 
 module.exports = { registerUser, loginUser, getUserDetails };
